@@ -13,7 +13,7 @@ counties() {
 }
 
 data_for_county() {
-  dbexec -quote "select date,cases,deaths from days where county = '$1' AND state = '$2' order by date asc"
+  dbexec -csv "select date,cases,deaths from days where county = \"$1\" AND state = '$2' order by date asc"
 }
 
 states | while read state; do
@@ -22,10 +22,6 @@ states | while read state; do
     test -d "$statedir" || mkdir -vp "$statedir"
     jsonfile="$statedir/${county//[[:space:]]/_}.json"
     test -e "$jsonfile" && rm -v "$jsonfile"
-    data_for_county "$county" "$state" | tr "'" '"' | while read day; do
-      echo "[$day]"
-    done |
-      jq -rs '.[] | { day: .[0], cases: .[1], deaths: .[2] }' |
-      jq -s . > "$jsonfile"
+    (echo "date,cases,deaths"; data_for_county "$county" "$state") | csvjson > "$jsonfile"
   done
 done
