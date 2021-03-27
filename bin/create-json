@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 dbexec() {
-  sqlite3 ./us-counties.sqlite3 "$1" "$2"
+  sqlite3 -readonly ./us-counties.sqlite3 "$1" "$2"
 }
 
 states() {
@@ -19,9 +19,13 @@ data_for_county() {
 states | while read state; do
   counties "$state" | while read county; do
     statedir="./json/${state//[[:space:]]/_}"
-    test -d "$statedir" || mkdir -vp "$statedir"
+    test -d "$statedir" || mkdir -p "$statedir"
     jsonfile="$statedir/${county//[[:space:]]/_}.json"
-    test -e "$jsonfile" && rm -v "$jsonfile"
-    (echo "date,cases,deaths"; data_for_county "$county" "$state") | csvjson > "$jsonfile"
+    test -e "$jsonfile" && rm "$jsonfile"
+    (echo "date,cases,deaths"; data_for_county "$county" "$state") | csvjson > "$jsonfile" &
   done
+  echo "Processing $state"
+  wait
 done
+
+echo "Done."
