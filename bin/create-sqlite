@@ -1,0 +1,3 @@
+#!/bin/sh
+
+printf ".mode csv\n.import us-counties.csv days" | sqlite3 us-counties.sqlite3

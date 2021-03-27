@@ -1,0 +1,31 @@
+#!/usr/bin/env zsh
+
+dbexec() {
+  sqlite3 ./us-counties.sqlite3 "$1" "$2"
+}
+
+states() {
+  dbexec 'select distinct(state) from days'
+}
+
+counties() {
+  dbexec "select distinct(county) from days where state = '$1'"
+}
+
+data_for_county() {
+  dbexec -quote "select date,cases,deaths from days where county = '$1' AND state = '$2' order by date asc"
+}
+
+states | while read state; do
+  counties "$state" | while read county; do
+    statedir="./json/${state//[[:space:]]/_}"
+    test -d "$statedir" || mkdir -vp "$statedir"
+    jsonfile="$statedir/${county//[[:space:]]/_}.json"
+    test -e "$jsonfile" && rm -v "$jsonfile"
+    data_for_county "$county" "$state" | tr "'" '"' | while read day; do
+      echo "[$day]"
+    done |
+      jq -rs '.[] | { day: .[0], cases: .[1], deaths: .[2] }' |
+      jq -s . > "$jsonfile"
+  done
+done
