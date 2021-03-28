@@ -8,10 +8,40 @@ class CovidCounty {
   get cumulativeDeaths() { return this.timeline.map(d => d.deaths) }
 
   get cases() {
-    return this.timeline.map((d,i,a) => i < 1 ? d.cases : d.cases - a[i-1].cases)
+    return this.timeline.map((d,i,a) => i < 1 ? parseInt(d.cases, 10) : parseInt(d.cases, 10) - parseInt(a[i-1].cases))
   }
 
   get deaths() {
-    return this.timeline.map((d,i,a) => i < 1 ? d.deaths : d.deaths - a[i-1].deaths)
+    return this.timeline.map((d,i,a) => i < 1 ? parseInt(d.deaths, 10) : parseInt(d.deaths, 10) - parseInt(a[i-1].deaths))
   }
 }
+
+async function getCountyTimeline(county) {
+  let json = await fetch(`json/${county}.json`).then(resp => resp.json());
+  return new CovidCounty(json);
+};
+
+window.addEventListener('DOMContentLoaded', (event) => {
+  let params = (new URL(document.location)).searchParams;
+  let counties = params.getAll('c');
+  if (counties.length == 0) counties.push('Illinois/Cook');
+  let timeline_promises = counties.map((c) => getCountyTimeline(c));
+  Promise.all(timeline_promises).then(function (timelines) {
+    let dataset_promises = timelines.map((t,i) => (
+      { label: counties[i], borderColor: 'black', data: t.deaths }
+    ));
+
+    Promise.all(dataset_promises).then(function (datasets) {
+      window._datasets = datasets;
+      let ctx = document.getElementById('county').getContext('2d');
+      let chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: timelines[0].dates,
+          datasets: datasets
+        },
+        options: {}
+      });
+    });
+  });
+});
