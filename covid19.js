@@ -16,6 +16,8 @@ class CovidCounty {
   }
 }
 
+const line_colors = ['red', 'green', 'blue', 'purple', 'orange', 'brown', 'black'];
+
 async function getCountyTimeline(county) {
   let json = await fetch(`json/${county}.json`).then(resp => resp.json());
   return new CovidCounty(json);
@@ -25,10 +27,16 @@ window.addEventListener('DOMContentLoaded', (event) => {
   let params = (new URL(document.location)).searchParams;
   let counties = params.getAll('c');
   if (counties.length == 0) counties.push('Illinois/Cook');
+  while (counties.length > line_colors) counties.pop();
   let timeline_promises = counties.map((c) => getCountyTimeline(c));
   Promise.all(timeline_promises).then(function (timelines) {
     let dataset_promises = timelines.map((t,i) => (
-      { label: counties[i], borderColor: 'black', data: t.deaths }
+      {
+        label: counties[i],
+        borderColor: line_colors[i],
+        data: t.deaths,
+        fill: false
+      }
     ));
 
     Promise.all(dataset_promises).then(function (datasets) {
